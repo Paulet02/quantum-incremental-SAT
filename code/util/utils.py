@@ -1,4 +1,5 @@
 import math
+import copy
 
 
 def variables(clauses):
@@ -53,3 +54,71 @@ def appearances_in(clauses_a, clauses_b):
         else:
             not_appears.append(variable)
     return appears, not_appears
+
+ #take into account the fixed variables
+def get_number_solutions(sat, conf={}):#to test, works fine
+    variables_list = variables(sat)
+    variables_list.sort()
+    print("Las variables ordenadas: ",variables_list)
+    fixed_variables = list(conf.keys())
+    
+    #generate the map between variables and qubits and variables and bin number
+    mapping_bin = {}
+    mapping = {}
+    for var in variables_list:
+        mapping[len(mapping)] = var
+        if var not in conf.keys():
+            mapping_bin[len(mapping_bin)] = var
+    #mapping = OrderedDict(sorted(mapping.items(), key=lambda t: t[0]))
+    print("los mappings")
+    print(mapping)
+    print(mapping_bin)
+    n = len(variables(sat))
+    n_unknown_variables = n-int(len(fixed_variables)/2)
+    print(n)
+    solutions = 0
+    print(2**(n_unknown_variables))
+    print(int(len(fixed_variables)/2))
+    print(fixed_variables)
+    binary_generator = bin_generator(n_unknown_variables)
+    for bin_number in binary_generator:
+        #bin_number = list(format(i, '0' + str(n_unknown_variables) + 'b'))
+        #bin_number.reverse()
+        configuration = {}
+        configuration = copy.deepcopy(conf)
+        print(configuration)
+        print(bin_number)
+        for j in range(len(bin_number)):
+            #print(mapping[j],conf.keys(),conf,fixed_variables)
+            if bin_number[j] == '0':
+                configuration[mapping_bin[j]] = False
+                configuration[-mapping_bin[j]] = True
+            #       print("Estoy en el 0",j, configuration)
+            else:
+                configuration[mapping_bin[j]] = True
+                configuration[-mapping_bin[j]] = False
+            #      print("Estoy en el 1",j, configuration)
+        print(configuration)
+        if evaluate(sat, configuration):
+            solutions = solutions + 1
+            bin_number.reverse()
+            print("Hay solucion en: " + str(bin_number))
+    return solutions
+
+#https://toughsat.appspot.com/
+def get_data_dimacs(path):
+    file = open(path, 'r') 
+    lines = file.readlines() 
+    n_variables = 0
+    n_clauses = 0
+    count = 0
+    clauses = []
+    for line in lines:
+        if count == 1:
+            n_variables = int(line.split()[2])
+            n_clauses = int(line.split()[3])
+        elif count > 1:
+            ls = list(map(int, line.split()[:-1]))
+            clauses.append(ls)
+        count = count + 1
+    return n_variables, n_clauses, clauses

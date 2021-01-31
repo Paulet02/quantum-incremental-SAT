@@ -23,3 +23,11 @@ print("La distancia es: ", distance([1,2,3],[3,7,8,9]))
 print("El spllit: ", split_literals([-7, -2, 4]))
 a,b=appearances_in([[-7, -2, 4]], [[-4, -7, -6]])
 print("Apariencias en :", a, b)
+
+sat = [[4,1],[-4,3,-2],[-3,-1],[2,-4],[4,3]]
+#print("Numero de soluciones: ", get_number_solutions(sat))
+sat = [[-3, 2, 1], [-7], [-7, -2, 4], [-4, -7, -6], [-7], [5, 2], [-6, -2, -4], [5]]
+#print("Numero de soluciones: ", get_number_solutions(sat))
+sol_49 = [[-1,7,2],[3,6,4]]
+#print("Numero de soluciones: ", get_number_solutions(sol_49))
+print(get_data_dimacs("../test/dimacs/tfm-sat.dimacs"))
