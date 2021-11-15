@@ -48,7 +48,8 @@ class UtilsTest(unittest.TestCase):
 		self.assertListEqual([2], not_appears)
 
 	def test_variables_in_clause(self):
-		self.assertListEqual([3, 2, 1], variables_in_clause([-3, 2, 1]))
+		self.assertListEqual([1, 2, 3], variables_in_clause([-3, 2, 1]))
+		self.assertListEqual([1, 2, 3, 4], variables_in_clause(list({1: False, -1: True, 2: True, -2: False, 3: True, -3: False, 4: False, -4: True}.keys())))
 
 	def test_get_data_dimacs(self):
 		n_variables, n_clauses, clauses = get_data_dimacs(str(self.current_path) + "/dimacs/tfm-sat.dimacs")
@@ -59,6 +60,39 @@ class UtilsTest(unittest.TestCase):
 		for i in range(len(clauses)):
 			self.assertListEqual(sat_expected[i], clauses[i])
 		
+	def test_get_solution(self):
+		sat = [[4,1],[-4,3,-2],[-1,-3],[2,-4],[4,3]]
+		solution = get_solution(sat, conf={})
+		solution_expected = {1: False, -1: True, 2: True, -2: False, 3: True, -3: False, 4: True, -4: False}
+		self.assertDictEqual(solution_expected, solution)
+		
+
+	def test_findsubsets(self):
+		elements = [1,2,3,4]
+		combinations = findsubsets(elements, 3)
+		solution_expected = [(1, 2, 3), (1, 2, 4), (1, 3, 4), (2, 3, 4)]
+		self.assertListEqual(solution_expected, combinations)
+
+	def test_variables_in_dict(self):
+		conf = {1: False, -1: True, 2: True, -2: False, 3: True, -3: False, 4: True, -4: False}
+		vars_expected = [1, 2, 3, 4]
+		vars = list(variables_in_dict(conf))
+		self.assertListEqual(vars_expected, vars)
+
+		conf = {-1: True, 2: True, -2: False, 5: True, 3: True, -3: False, 4: True, -4: False}
+		vars_expected = [1, 2, 3, 4, 5]
+		vars = list(variables_in_dict(conf))
+		self.assertListEqual(vars_expected, vars)
+
+	def test_heuristic_sort_by_appearances(self):
+		clauses = [[4,1,2],[-4,3,-2],[-4,-1,-3],[-3,2,-4],[2,4,3]]
+		order = heuristic_sort_by_appearances(clauses)
+		order_expected = [{'clause': [-4, 3, -2], 'distance': 0}, {'clause': [-4, -1, -3], 'distance': 0}, {'clause': [-3, 2, -4], 'distance': 0}, {'clause': [2, 4, 3], 'distance': 0}, {'clause': [4, 1, 2], 'distance': 0.22222}]
+
+		for i in range(len(order)):
+			self.assertListEqual(order_expected[i]['clause'], order[i]['clause'])
+			self.assertEqual(order_expected[i]['distance'], order[i]['distance'])
+
 '''
 
 	def test_satisfied(self):
