@@ -327,20 +327,20 @@ class Quantum_DSAT:#first most significant
         if extra_qubit:
             superposition = [qj.H(1) if i < input_qubits else qj.I(1) for i in range(0,dim - 1)]
             superposition.append(qj.PauliX())
-            grover_algorithm.addLine(*superposition)
+            grover_algorithm.add_operation(*superposition)
             #print(grover_algorithm.lines)
         else:
             superposition = [qj.H(1) if i < input_qubits else qj.I(1) for i in range(0, dim)]
-            grover_algorithm.addLine(*superposition)
+            grover_algorithm.add_operation(*superposition)
             #print(grover_algorithm.lines)
         grover_iteration = qj.QGate(name="Grover's iteration")
-        grover_iteration.addLine(oracle)
+        grover_iteration.add_operation(oracle)
         if uncomputation_oracle:
-            grover_iteration.addLine(uncomputation_oracle)
+            grover_iteration.add_operation(uncomputation_oracle)
         #ism=
         #grover_iteration.addLine(ism)
         for i in range(iterations):
-            grover_algorithm.addLine(grover_iteration)
+            grover_algorithm.add_operation(grover_iteration)
         #print(grover_algorithm.lines)
         
         
@@ -364,15 +364,15 @@ class Quantum_DSAT:#first most significant
         #print(custom_superposition.lines)
         #Line negation
         line_negation = qj.QGate("Line negation")
-        line_negation.addLine(*['X' for i in range(len(variables_mode))])
+        line_negation.add_operation(*['X' for i in range(len(variables_mode))])
         #Controlled-n Z
         controlled_Z = self.controlled_Z(len(variables_mode)-1)
         #construct the operator
-        ism_custom.addLine(custom_superposition)
-        ism_custom.addLine(line_negation)
-        ism_custom.addLine(controlled_Z)
-        ism_custom.addLine(line_negation)#qj.dagger(line_negation))
-        ism_custom.addLine(custom_superposition)#qj.dagger(custom_superposition))
+        ism_custom.add_operation(custom_superposition)
+        ism_custom.add_operation(line_negation)
+        ism_custom.add_operation(controlled_Z)
+        ism_custom.add_operation(line_negation)#qj.dagger(line_negation))
+        ism_custom.add_operation(custom_superposition)#qj.dagger(custom_superposition))
         #print("esta es custom superposition")
         #print(ism_custom.lines)
         return ism_custom
@@ -382,29 +382,32 @@ class Quantum_DSAT:#first most significant
     def custom_ISM(self, variables_mode, mapping):#0 -> I; 1 -> X; 2 -> H
         #first most significant
         gates = {0:'I', 1:'X', 2:'H'}
-        ism_custom  = qj.QGate("Inversion about the mean custom")
+        ism_custom  = qj.QGate(len(mapping), "Inversion about the mean custom")
         #
         custom_superposition = self.custom_Superposition(variables_mode, mapping)
         #print("custom_superposition")
         #print(custom_superposition.lines)
         #Line negation
-        line_negation = qj.QGate("Line negation")
+        line_negation = qj.QGate(len(mapping), "Line negation")
         for var in mapping.keys():
-            line_negation.addLine(*['X' if i == mapping[var] else None for i in range(len(mapping))])
+            for i in range(len(mapping)):
+                if i == mapping[var]:
+                    line_negation.add_operation('X', i)
+            #line_negation.add_operation(*['X' if i == mapping[var] else None for i in range(len(mapping))])
             
         controls = list(mapping.values())
         #print("Esto son los controles", controls)
         #print(line_negation.lines)
         z_gate = controls.pop()
-        controlled_Z = qj.QGate("Controlled Z")
-        controlled_Z.addLine(*[['Z', controls, None] if i == z_gate else None for i in range(len(mapping))])
+        controlled_Z = qj.QGate(len(mapping), "Controlled Z")
+        controlled_Z.add_operation('Z', z_gate, controls)
         #print(controlled_Z.lines)
         #construct the operator
-        ism_custom.addLine(custom_superposition)
-        ism_custom.addLine(line_negation)
-        ism_custom.addLine(controlled_Z)
-        ism_custom.addLine(line_negation)#qj.dagger(line_negation))
-        ism_custom.addLine(custom_superposition)#qj.dagger(custom_superposition))
+        ism_custom.add_operation(custom_superposition)
+        ism_custom.add_operation(line_negation)
+        ism_custom.add_operation(controlled_Z)
+        ism_custom.add_operation(line_negation)#qj.dagger(line_negation))
+        ism_custom.add_operation(custom_superposition)#qj.dagger(custom_superposition))
         #print("esta es custom superposition")
         #print(ism_custom.lines)
         return ism_custom
@@ -419,15 +422,19 @@ class Quantum_DSAT:#first most significant
 
 
         #first most significant
-        gates = {0:'I', 1:'X', 2:'H'}
+        gates = {0:None, 1:'X', 2:'H'}
         n_qubits = max(mapping.values())+1
         #literals_ordered = self.variables(clauses)
         #literals_ordered.sort()
         #print("la longitud es:",len(variables_mode), variables_mode)
         #print("la longitud es:",len(mapping), mapping)
-        custom_superposition = qj.QGate("Custom superposition")
+        custom_superposition = qj.QGate(n_qubits, "Custom superposition")
         for var in mapping.keys():
-            custom_superposition.addLine(*[gates[variables_mode[var]] if i == mapping[var] else None for i in range(n_qubits)])
+            #custom_superposition.add_operation(*[gates[variables_mode[var]] if i == mapping[var] else None for i in range(n_qubits)])
+            for i in range(n_qubits):
+                if i == mapping[var]:
+                    custom_superposition.add_operation(gates[variables_mode[var]], i)
+
             #[gates[variables_mode[var]] if i == mapping[var] else None for i in range(len(variables_mode))]
         
         #print(custom_superposition.lines)
@@ -437,8 +444,8 @@ class Quantum_DSAT:#first most significant
     def custom_Superposition_normal(self, variables_mode):#0 -> I; 1 -> X; 2 -> H
         #first most significant
         gates = {0:'I', 1:'X', 2:'H'}
-        custom_superposition = qj.QGate("Custom superposition")
-        custom_superposition.addLine(*[gates[g] for g in variables_mode])
+        custom_superposition = qj.QGate(len(variables_mode), "Custom superposition")
+        custom_superposition.add_operation(*[gates[g] for g in variables_mode])
         return custom_superposition
         
     
@@ -471,47 +478,49 @@ class Quantum_DSAT:#first most significant
         cont = 0
         oracle_gates = []
         unoracle_gates = []
+        dim = len(literals_ordered) + 1 + n_extra_qubits 
         for clause in new_clauses:
-            gate = qj.QGate("Clause "+str(cont))
-            ungate = qj.QGate("UnClause "+str(cont))
+            gate = qj.QGate(dim, "Clause "+str(cont))
+            ungate = qj.QGate(dim, "UnClause "+str(cont))
             controls, anticontrols = utils.split_literals(clause)
             controls = list(map(lambda x: mapping[abs(x)], controls))
             anticontrols = list(map(lambda x: mapping[abs(x)], anticontrols))
             #print("controles y anticontroles")
             #print(controls,anticontrols)
             #compute the clause
-            gate.addLine(*[None for i in range(len(literals_ordered) + cont)], ['X', controls, anticontrols], *[None for i in range(n_extra_qubits - cont)])
+            gate.add_operation('X', len(literals_ordered) + cont, controls, anticontrols)
+            #gate.add_operation(*[None for i in range(len(literals_ordered) + cont)], ['X', controls, anticontrols], *[None for i in range(n_extra_qubits - cont)])
             #print(gate.lines)
             #negates the entire clause
-            gate.addLine(*[None for i in range(len(literals_ordered) + cont)], ['X', [], []], *[None for i in range(n_extra_qubits - cont)])
+            gate.add_operation('X', len(literals_ordered) + cont)
             #print(gate.lines)
-            ungate.addLine(*[None for i in range(len(literals_ordered) + cont)], ['X', [], []], *[None for i in range(n_extra_qubits - cont)])
-            ungate.addLine(*[None for i in range(len(literals_ordered) + cont)], ['X', controls, anticontrols], *[None for i in range(n_extra_qubits - cont)])
+            ungate.add_operation('X', len(literals_ordered) + cont)
+            ungate.add_operation('X', len(literals_ordered) + cont, controls, anticontrols)
             
             #add the gates to the array
-            oracle_gates.append(copy.deepcopy(gate))
-            unoracle_gates.insert(0, copy.deepcopy(ungate))
+            oracle_gates.append(gate)
+            unoracle_gates.insert(0, ungate)
             #print("Estas son las gates")
             #print(gate.lines)
             
             #increase auxiliar qubit
             cont = cont + 1
             
-        gate = qj.QGate("Total conjunction")
+        gate = qj.QGate(len(literals_ordered) + n_extra_qubits + 1, "Total conjunction")
         #gate.addLine(*[None for i in range(len(literals_ordered) + n_extra_qubits)], ['Z', [i for i in range(len(literals_ordered), len(literals_ordered) + n_extra_qubits)], []])
-        gate.addLine(*[None for i in range(len(literals_ordered) + n_extra_qubits)], ['X', [i for i in range(len(literals_ordered), len(literals_ordered) + n_extra_qubits)], []])
+        gate.add_operation('X', len(literals_ordered) + n_extra_qubits, [i for i in range(len(literals_ordered), len(literals_ordered) + n_extra_qubits)], [])
         #print("++++++++++++++++++++")
         #print(gate.lines)
         oracle_gates.append(gate)
-        unoracle_gates.insert(0, copy.deepcopy(gate))
+        unoracle_gates.insert(0, gate)#unoracle_gates.insert(0, copy.deepcopy(gate))
         #create the oracle
-        oracle = qj.QGate("Oracle")
+        oracle = qj.QGate(len(literals_ordered) + n_extra_qubits + 1, "Oracle")
         for gate in oracle_gates:
-            oracle.addLine(gate)
+            oracle.add_operation(gate)
         #create the unoracle
-        unoracle = qj.QGate("Unoracle")
+        unoracle = qj.QGate(len(literals_ordered) + n_extra_qubits + 1, "Unoracle")
         for gate in unoracle_gates:
-            unoracle.addLine(gate)
+            unoracle.add_operation(gate)
         #print(oracle_gates)
         #print(unoracle_gates)
         #print(oracle.lines)
@@ -519,13 +528,13 @@ class Quantum_DSAT:#first most significant
         return oracle, unoracle, mapping
             
     def controlled_Z(self, n_control):#works, the Z in the most significant (last position)
-        controlled_Z  = qj.QGate("Controlled^n Z")
+        controlled_Z  = qj.QGate(n_control + 1, "Controlled^n Z")
         line = []
         for i in range(n_control):
             line.append(None)
         z_controls = [i - 1 for i in range(1, n_control + 1)]
         line.append(['Z', z_controls])
-        controlled_Z.addLine(*line)
+        controlled_Z.add_operation(*line)
         
         #CnZ=qj.PauliZ()
         #for i in range(n_control):
@@ -537,19 +546,19 @@ class Quantum_DSAT:#first most significant
     def oracle(self, sol):
         gates = {1:qj.I(1), 0:qj.PauliX()}
         negation = qj.QGate("Negation solution")
-        negation.addLine(*[gates[g] for g in sol])
+        negation.add_operation(*[gates[g] for g in sol])
         oracle = qj.QGate("Oracle")
-        oracle.addLine(negation, qj.I(1))
-        oracle.addLine(self.controlled_Z(len(sol)))
-        oracle.addLine(negation, qj.I(1))
+        oracle.add_operation(negation, qj.I(1))
+        oracle.add_operation(self.controlled_Z(len(sol)))
+        oracle.add_operation(negation, qj.I(1))
         return oracle
     
     def test(self):
         N=1
         mp_n = qj.QCircuit(name="McCulloch-Pitts neuron")
         input_operator = qj.QGate("Input pattern")
-        input_operator.addLine(qj.H(N),qj.I(1))
-        mp_n.addLine(input_operator)
+        input_operator.add_operation(qj.H(N),qj.I(1))
+        mp_n.add_operation(input_operator)
         print ("Created!")
         #print (mp_n.lines[0][0].lines)
         #print ("Executing McCulloch-Pitts neuron circuit...")
@@ -582,20 +591,20 @@ class Quantum_DSAT:#first most significant
 
         custom_ISM = self.custom_ISM(variables, mapping)
         n_qubits = len(variables) + len(clauses) + 1
-        grover_algorithm = qj.QGate("Grover's algorithm")
-        grover_algorithm.addLine(*[None for i in range(n_qubits)])
+        grover_algorithm = qj.QGate(n_qubits, "Grover's algorithm")
+        #grover_algorithm.add_operation(*[None for i in range(n_qubits)])
         quantum = False
         if n_iterations_rounded >= 1:
             self.total_iterations = self.total_iterations + n_iterations_rounded
             self.max_n_variables_superposed = max(self.max_n_variables_superposed, unknown_variables)
             self.max_n_clauses_in_oracle = max(self.max_n_clauses_in_oracle, len(clauses))
             self.max_qubits_grover = max(self.max_qubits_grover, n_qubits)
-            grover_algorithm.addLine(custom_superposition, *[None for i in range(len(clauses) + 1)])
+            grover_algorithm.add_operation(custom_superposition, [j for j in range(len(variables))])
             for i in range(n_iterations_rounded):
-                grover_algorithm.addLine(oracle)
-                grover_algorithm.addLine(*['Z' if i == (len(variables) + len(clauses)) else None for i in range(len(variables) + len(clauses) + 1)])
-                grover_algorithm.addLine(unoracle)
-                grover_algorithm.addLine(custom_ISM, *[None for i in range(len(clauses) + 1)])
+                grover_algorithm.add_operation(oracle, [j for j in range(n_qubits)])
+                grover_algorithm.add_operation('Z', len(variables) + len(clauses))
+                grover_algorithm.add_operation(unoracle, [j for j in range(n_qubits)])
+                grover_algorithm.add_operation(custom_ISM, [j for j in range(len(variables))])
             quantum = True
         elif n_iterations_rounded < 1 and n_iterations_rounded >= 0:
             solution = utils.get_solution(clauses, conf=configuration)
@@ -693,7 +702,7 @@ class Quantum_DSAT:#first most significant
                 print(qubit_rotation, angles[alpha], controls, anticontrols)
                 angle = angles[alpha]
                 #in radians
-                custom_amplitudes.addLine(*[['U('+str(angle*2)+',0,pi)',controls,anticontrols] if i == qubit_rotation else None for i in range(N)])
+                custom_amplitudes.add_operation(*[['U('+str(angle*2)+',0,pi)',controls,anticontrols] if i == qubit_rotation else None for i in range(N)])
         #print(angles)
         #print(custom_amplitudes.lines)
         reg = qj.QRegistry(N)

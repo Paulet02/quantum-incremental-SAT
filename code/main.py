@@ -50,14 +50,14 @@ for seed in seeds:
     for file in files:
         print("Example ", cont, " of ", len(files)*len(seeds))
         filename = os.path.splitext(os.path.basename(file))[0]
-        id_natural = "Natural order_"+str(seed)+"_"+str(filename)
+        id_random = "Random order_"+str(seed)+"_"+str(filename)
         id_heuristic = "Heuristic's order_"+str(seed)+"_"+str(filename)
         id_grover = "Grover_"+str(seed)+"_"+str(filename)
-        if id_natural not in ids or id_heuristic not in ids or id_grover not in ids:
+        if id_random not in ids or id_heuristic not in ids or id_grover not in ids:
             row_natural, row_heuristic, row_grover = get_results(file, seed, q_simulation)
-            if id_natural not in ids:
+            if id_random not in ids:
                 data.append(row_natural)
-                ids.add(id_natural)
+                ids.add(id_random)
             
             if id_heuristic not in ids:
                 data.append(row_heuristic)
