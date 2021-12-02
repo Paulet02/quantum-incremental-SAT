@@ -1,2 +1,3 @@
 networkx==2.4
 qsimov-Mowstyl==4.0.0
+cnfgen
