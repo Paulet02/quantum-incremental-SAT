@@ -1,3 +1,5 @@
+from cnfgen import RandomKCNF, utils
+from code.solver.quantum_solver import Quantum_DSAT
 import math
 import copy
 import numpy as np
@@ -5,7 +7,9 @@ import cmath
 import itertools
 import random
 import os
-from code.solver.quantum_solver import Quantum_DSAT
+import re
+import sys
+
 
 def variables(clauses):
         return literals(list(map(lambda x: list(map(lambda y: abs(y), x)), clauses)))
@@ -247,7 +251,6 @@ def is_satisfiable(sat, conf={}):
 def get_results(file, seed, q_simulation):
     n_variables, n_clauses, clauses = get_data_dimacs(file)
     filename = os.path.splitext(os.path.basename(file))[0]
-    print(filename)
     
     solutions = get_number_solutions(clauses)
     nosol=0
@@ -262,11 +265,11 @@ def get_results(file, seed, q_simulation):
             'Max number of clauses in oracle': max_n_clauses_in_oracle, 
             'Total iterations': total_iterations,
             'Max number of qubits used in circuit': max_qubits_grover,
-            'Heuristic': "Natural order",
+            'Heuristic': "Random order",
             'Seed': seed,
             'Example': filename,
             'Solution': conf,
-            'id': "Natural order_"+str(seed)+"_"+str(filename)}
+            'id': "Random order_"+str(seed)+"_"+str(filename)}
         if evaluate(clauses, conf):
             #append row to the dataframe
             pass
@@ -315,3 +318,79 @@ def get_results(file, seed, q_simulation):
         nosol = nosol + 1
 
     return row_natural, row_heuristic, row_grover
+    
+    
+
+def generate_benchmarks(num_variables=[10,11], k_sat=[3], densities=[3,4], examples=20, path="", seed=1):
+    #print(os.path.dirname(os.path.abspath(__file__)))
+    
+    if not path:
+        path = os.getcwd()
+    
+    dimacs_data_pattern = re.compile('p cnf[\S\n ]*')
+    header_pattern = re.compile('c description[\S\n ]*clauses\n')
+    print ("The current working directory is %s" % path)
+    
+    random.seed(seed)
+    benchmark_path = os.path.join(path, "benchmark")
+    
+    total_examples = len(num_variables) * len(k_sat) * len(densities) * examples
+    cont = 0
+    
+    try:
+        if not os.path.exists(benchmark_path):
+            print(benchmark_path)
+            os.mkdir(benchmark_path)
+            
+        for k in k_sat:
+            k_sat_path = os.path.join(benchmark_path, str(k) + "_sat")
+            if not os.path.exists(k_sat_path):
+                os.mkdir(k_sat_path)
+            for var in num_variables:
+                var_path = os.path.join(k_sat_path, str(var) + "_variables")
+                if not os.path.exists(var_path):
+                    os.mkdir(var_path)
+                for density in densities:
+                    density_path = os.path.join(var_path, str(density) + "_density")
+                    if not os.path.exists(density_path):
+                        os.mkdir(density_path)
+                    for i in range(examples):
+                        cont = cont + 1
+                        sys.stdout.write("Generating " + str(k) + "-SAT with " + str(var) + " variables and density " + str(density) + " example " + str(i) + "/" + str(examples) + " ----- " + str(int(100 * cont / total_examples)) + "%\r")
+                        sys.stdout.flush()
+                        satisfiable = False
+                        while(not satisfiable):
+                            sat = RandomKCNF(k, var, var*density, seed=random.random())
+                            
+                            header = header_pattern.search(sat.dimacs()).group()
+                            dimacs_data = dimacs_data_pattern.search(sat.dimacs()).group()
+                            
+                            sat_data = header + dimacs_data
+                            
+                            _, _, clauses = parse_dimacs_data(sat_data)
+                            
+                            satisfiable = is_satisfiable(clauses)
+                            
+                            if satisfiable:
+                                with open(os.path.join(density_path, str(k) + "_sat_"+str(var) + "_variables_"+str(density) + "_density_example_"+ str(i)+".dimacs"), 'w') as out_file:
+                                    out_file.write(sat_data)
+    except OSError:
+        print(OSError.strerror())
+        print ("Creation of the directory %s failed" % path)
+    else:
+        print ("Successfully created the directory %s " % path)
+        
+def parse_dimacs_data(dimacs_data):
+    n_variables = 0
+    n_clauses = 0
+    count = 0
+    clauses = []
+    for line in dimacs_data.splitlines():
+        if count == 1:
+            n_variables = int(line.split()[2])
+            n_clauses = int(line.split()[3])
+        elif count > 1:
+            ls = list(map(int, line.split()[:-1]))
+            clauses.append(ls)
+        count = count + 1
+    return n_variables, n_clauses, clauses
